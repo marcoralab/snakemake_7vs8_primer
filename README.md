@@ -148,3 +148,7 @@ rule some_rule:
         lsf_queue="long",
         lsf_extra="-R 'himem'"
 ```
+
+### Remote storage providers
+
+Snakemake 8 has a different way of specifying remote files. Please see the example pipelines for details.
