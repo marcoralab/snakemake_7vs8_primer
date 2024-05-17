@@ -5,9 +5,9 @@
 Install a Snakemake 8 environment by doing the following:
 
 ```bash
-mamba create -n snakemake8 snakemake python=3.10 \
-  snakemake-executor-plugin-lsf snakemake-storage-plugin-http \
-  snakemake-storage-plugin-ftp
+mamba create -n snakemake8 snakemake python=3.10 -C bfh \
+  snakemake-executor-plugin-lsf=0.2.5 \ 
+  snakemake-storage-plugin-http snakemake-storage-plugin-ftp
 ```
 
 Also make sure your main environment has Snakemake 7.32.4 installed:

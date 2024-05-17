@@ -1,4 +1,0 @@
-set-resources:
-    test3:
-        lsf_queue: long
-        lsf_extra: "-R himem"
