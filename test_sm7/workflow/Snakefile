@@ -1,0 +1,91 @@
+from snakemake.remote.FTP import RemoteProvider as FTPRemoteProvider
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+
+HTTP = HTTPRemoteProvider()
+FTP = FTPRemoteProvider()
+
+tgbase = "http://ftp-trace.ncbi.nih.gov/1000genomes/ftp/"
+tgbase_38 = ("https://storage.googleapis.com/" +
+             "gcp-public-data--broad-references/hg38/v0/")
+
+tgfasta = dict(
+    hg19=(tgbase + "technical/reference/human_g1k_v37.fasta.gz"),
+    GRCh38=(tgbase_38 + 'Homo_sapiens_assembly38.fasta'))
+
+def fasta_remote(wc):
+    gbuild = wc.gbuild
+    return HTTP.remote(tgfasta[gbuild])
+
+def fasta_md5(wc):
+    gbuild = wc.gbuild
+    if gbuild == 'GRCh38':
+        return '7ff134953dcca8c8997453bbb80b6b5e'
+    elif gbuild == 'hg19':
+        return '45f81df94f0408d082363e34a081ed81'
+
+rule all:
+    input:
+        'resources/ref/human_g1k_GRCh38.fasta',
+        'output3.txt'
+
+rule download_tg_fa:
+    input: fasta_remote
+    output:
+        "resources/ref/human_g1k_{gbuild}.fasta",
+        "resources/ref/human_g1k_{gbuild}.fasta.fai"
+    params:
+        md5 = lambda wc: fasta_md5(wc)
+    resources:
+        mem_mb = 10000,
+        time_min = 30
+    conda: 'envs/bcftools.yaml'
+    #cache: True
+    localrule: True
+    shell:
+        '''
+md5sum -c <(echo {params.md5} {input[0]})
+if [[ "{input[0]}" == *.gz ]]; then
+  zcat {input[0]} > {output[0]} && rstatus=0 || rstatus=$?; true
+  if [ $rstatus -ne 2 && $rstatus -ne 0 ]; then
+    exit $rstatus
+  fi
+else
+  cp {input[0]} {output[0]}
+fi
+samtools faidx {output[0]}
+'''
+
+rule test2:
+    output: 'output2.txt'
+    threads: 2
+    resources:
+        time_min = 10,
+        mem_mb = 2000
+    shell:
+        '''
+# check if $LSB_JOBID is defined
+if [ -z "$LSB_JOBID" ]; then
+    echo local job > {output}
+else
+    bjobs -l $LSB_JOBID > {output}
+fi
+'''
+
+rule test3:
+    input: 'output2.txt'
+    output:
+        main = 'output3.txt',
+        extra = 'output3.extra.txt'
+    resources:
+        walltime = '0:05',
+        mem_mb = 2000
+    shell:
+        '''
+echo "test3" > {output.main}
+cat {input} >> {output.main}
+if [ -z "$LSB_JOBID" ]; then
+    touch {output.extra}
+else
+    bjobs -l $LSB_JOBID > {output.extra}
+fi
+'''
